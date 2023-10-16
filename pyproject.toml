@@ -1,0 +1,42 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcce-scikit"
+description = "Scientific Toolkit to support analyses of the simulation program MCCE (https://github.com/GunnerLab) output files in python."
+authors = [{name = "Cat Chenal @ GunnerLab"}, {name = "Junjun Mao @ GunnerLab"}]
+
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+keywords = ["biophysics", "simulation", "microstate sampling"]
+dependencies = ["click",
+                # tbd,
+              ]
+
+dynamic = ["readme", "version"]
+
+[project.scripts]
+#TODO:
+#ms_to_pdb = "mcce-scikit.cli:ms_to_pdb"
+
+classifiers = [
+        "Development Status :: 2 - Pre-Alpha",
+        "Intended Audience :: Biophysicists, Developpers",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+
+[project.urls]
+Homepage = "https://github.com/GunnerLab/MCCE_Scikit"
+#TODO Documentation = "https://readthedocs.org"
+Changelog = "https://github.com/GunnerLab/MCCE_Scikit/blob/main/CHANGELOG.md"
+    ]
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/plain"}
+version = {attr = "mcce-scikit.VERSION"}
