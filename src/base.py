@@ -6,6 +6,7 @@ Contains all classes for creating MCCE objects:
  - MS
 """
 
+from collections import namedtuple
 from pathlib import Path
 import numpy as np
 import mcce_io as io
@@ -34,6 +35,9 @@ class Microstate:
         self.state = state
         self.E = E
         self.count = count
+
+
+Micro_tup = namedtuple("Microstate", ["E", "count", "state"])
 
 
 class MS:

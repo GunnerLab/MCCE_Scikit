@@ -3,14 +3,10 @@ Module: ms_sampling
 
 """
 
-from collections import namedtuple
 from pathlib import Path
 import numpy as np
 import base
 import mcce_io as io
-
-
-Micro_tup = namedtuple("Microstate", ["E", "count", "state"])
 
 
 def sort_microstate_list(ms_list: list, by: str = None):
