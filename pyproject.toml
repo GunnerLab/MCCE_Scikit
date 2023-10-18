@@ -32,10 +32,6 @@ classifiers = [
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
 
-[project.urls]
-Homepage = "https://github.com/GunnerLab/MCCE_Scikit"
-#TODO Documentation = "https://readthedocs.org"
-Changelog = "https://github.com/GunnerLab/MCCE_Scikit/blob/main/CHANGELOG.md"
     ]
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"], content-type = "text/plain"}
