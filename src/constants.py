@@ -8,3 +8,5 @@ ROOMT = 298.15  # default simulation temp [CC: mismatched precision]
 VALID_MC_METHODS = [
     "MONTERUNS",
 ]
+
+MONTE_RUNS = 6

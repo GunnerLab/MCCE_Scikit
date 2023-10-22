@@ -1,14 +1,19 @@
-"""
-Module: base.py
-Contains all classes for creating MCCE objects:
+# MCCE_Scikit/src/base.py
+
+"""Contains all classes for creating MCCE objects:
  - Conformer
  - Microstate
+ - Micro_tup: Microste as a namedtuple, used for reading only
  - MS
+
 """
 
 from collections import namedtuple
 from pathlib import Path
+from typing import Union
+from datetime import datetime
 import numpy as np
+import zlib
 import mcce_io as io
 import constants as cst
 
@@ -19,154 +24,339 @@ class Conformer:
         self.confid = ""
         self.resid = ""
         self.crg = 0.0
-        # self.occ = 0.0  # not used
 
     def load_from_head3lst(self, line):
         fields = line.split()
         self.iconf = int(fields[0]) - 1
         self.confid = fields[1]
         self.resid = self.confid[:3] + self.confid[5:11]
-        # self.occ = 0.0
         self.crg = float(fields[4])
 
 
 class Microstate:
     def __init__(self, state, E, count):
-        self.state = state
+        self.stateid = zlib.compress(" ".join([str(x) for x in state]).encode())
         self.E = E
         self.count = count
+
+    def state(self):
+        return [int(i) for i in zlib.decompress(self.stateid).decode().split()]
 
 
 Micro_tup = namedtuple("Microstate", ["E", "count", "state"])
 
 
 class MS:
-    """
-    FIXED confs = "always chosen", so each MS is comprised of
-    all FIXED + 1 conf from each free residue.
-    """
+    """Uses split ms_out files."""
 
-    def __init__(self, mcce_output_path, pH, Eh):
-        self.T = cst.ROOMT  # 273.15
+    def __init__(
+        self,
+        mcce_output_path: str,
+        pH: Union[int, float],
+        Eh: Union[int, float],
+        selected_MC: int = 0,
+        overwrite_split_files: bool = False,
+    ):
+        """MS.init
+
+        Parameters:
+            mcce_output_path (str): A MCCE simulation output folder.
+            pH (int or float): A pH point.
+            Eh (int or float): A Eh point.
+            selected_MC (int): The index of an MC run; one of `range(constants.MONTERUNS)`.
+            overwrite_split_files (bool): whether to redo the splitting of msout_file.
+        """
+
+        self.mcce_out = Path(mcce_output_path)
+        self.selected_MC = selected_MC
+        self.overwrite_split_files = overwrite_split_files
+        self.T = cst.ROOMT
         self.pH = pH
         self.Eh = Eh
-        self.N_ms = 0
-        self.N_uniq = 0
-        self.lowest_E = 0.0
-        self.highest_E = 0.0
-        self.average_E = 0.0
-
+        self.method = ""
+        self.conformers = []
+        self.iconf_by_confname = {}
         self.fixed_iconfs = []
+        self.fixed_residue_names = []
         self.fixed_crg = 0.0
         self.fixed_ne = 0.0
         self.fixed_nh = 0.0
         self.free_residues = []  # free residues, referred by conformer indices
-        self.iconf2ires = {}  # from conformer index to free residue index
-        self.microstates = {}
-        self.conformers = []
-        self.load_msout(mcce_output_path)
+        self.free_residue_names = []
+        self.ires_by_iconf = {}  # index of free residue by index of conf
 
-    @staticmethod
-    def check_next_lines(lines: list):
-        """Continue reading lines until non-comment line found.
-        Return a data line and the remaining lines.
-        """
-        while True:
-            line = lines.pop(0).strip()
-            if line and line[0] != "#":
-                break
-        return line, lines
-
-    def load_msout(self, mcce_output_path):
-        """Populate class variables from mcce_output_path/ms_out/ms_file"""
-        fname = io.get_msout_filename(mcce_output_path, self.pH, self.Eh)
-
-        lines = open(fname).readlines()
-        line, lines = self.check_next_lines(lines)
-
-        fields = line.split(",")
-        for field in fields:
-            key, value = field.split(":")
-            key = key.strip().upper()
-            value = float(value)
-            if key == "T":
-                self.T = value
-            elif key == "PH":
-                self.pH = value
-            elif key == "EH":
-                self.Eh = value
-
-        # second line, confirm this is from Monte Carlo sampling
-        line, lines = self.check_next_lines(lines)
-
-        key, value = line.split(":")
-        if key.strip() != "METHOD" or value.strip() not in cst.VALID_MC_METHODS:
-            raise ValueError(
-                f"This file: {fname} is not a valid Monte Carlo microstate file."
-            )
-
-        # Third line, fixed conformer indicies
-        line, lines = self.check_next_lines(lines)
-
-        self.fixed_iconfs = [int(i) for i in line.split(":")[1].split()]
-
-        # 4th line, free residues
-        line, lines = self.check_next_lines(lines)
-
-        residues = line.split(":")[1].split(" ;")
-        self.free_residues = [[int(i) for i in group.split()] for group in residues]
-        self.iconf2ires = {
-            iconf: idx for idx, res in enumerate(self.free_residues) for iconf in res
-        }
-
-        # find the next MC record
-        found_mc = False
-        newmc = False
+        self.microstates = {}  # a dict of microstates
+        # self.microstates_by_id = {}  # dict
+        self.counts = 0
         self.N_ms = 0
+        self.N_uniq = 0
 
-        for line in lines:
-            if line.find("MC:") == 0:  # ms starts
-                found_mc = True
-                newmc = True
-                continue
+        self.fname = io.get_msout_filename(self.mcce_out, self.pH, self.Eh)
+        self.msout_file_dir, created = io.mkdir_from_msout_file(self.fname)
+        if created:
+            io.split_msout_file(self.mcce_out, self.pH, self.Eh)
+        elif self.overwrite_split_files:
+            io.clear_folder(self.msout_file_dir)
+            io.split_msout_file(self.mcce_out, self.pH, self.Eh)
 
-            if newmc:
-                current_state = [int(c) for c in line.split(":")[1].split()]
-                newmc = False
-                continue
+        self._get_data()
 
-            if found_mc:
-                fields = line.split(",")
-                if len(fields) < 3:
+    def __repr__(self):
+        return f"""{type(self).__name__}("{self.mcce_out}", {self.pH}, {self.Eh}, selected_MC={self.selected_MC}, overwrite_split_files={self.overwrite_split_files})"""
+
+    def _get_conformer_data(self):
+        """Populate class vars: conformers, iconf_by_confname."""
+        head3_path = self.mcce_out.joinpath("head3.lst")
+        io.check_path(head3_path)
+        self.conformers, self.iconf_by_confname = io.read_conformers(head3_path)
+
+        return
+
+    def _get_header_data(self):
+        """Populate class vars: T, pH, Eh, method, fixed_confs, free_residues,
+        free_residue_names, and ires_by_iconf.
+        """
+
+        steps_done = {"exper": False, "method": False, "fixed": False, "free": False}
+
+        header_file = self.msout_file_dir.joinpath("header")
+        with open(header_file) as fh:
+            for nl, line in enumerate(fh):
+                # exper
+                if not steps_done["exper"]:
+                    fields = line.split(",")
+                    for field in fields:
+                        parts = field.split(":")
+                        key = parts[0].upper().strip()
+                        try:
+                            value = float(parts[1])
+                        except ValueError:
+                            print(
+                                f"Unrecognized experimental value \
+                                  (number expected), found: '{parts[1]}')."
+                            )
+                        if key == "T":
+                            self.T = value
+                        elif key == "PH":
+                            self.pH = value
+                        elif key == "EH":
+                            self.Eh = value
+                        else:
+                            raise ValueError(
+                                f"Unrecognized experimental condition part: {key}"
+                            )
+                    steps_done["exper"] = True
                     continue
 
-                state_e = float(fields[0])
-                count = int(fields[1])
-                flipped = [int(c) for c in fields[2].split()]
-                for ic in flipped:
-                    current_state[self.iconf2ires[ic]] = ic
+                # method
+                if not steps_done["method"]:
+                    key, value = line.split(":")
+                    if (
+                        key.strip() != "METHOD"
+                        or value.strip() not in cst.VALID_MC_METHODS
+                    ):
+                        raise ValueError(
+                            f"""This file: {fname} is not a valid Monte Carlo microstate file or the method is unknown.
+                            Supported methods are: {cst_VALID_MC_METHODS}."""
+                        )
+                    self.method = value.strip()
+                    steps_done["method"] = True
+                    continue
 
-                ms = Microstate(current_state, state_e, count)
+                # fixed
+                if not steps_done["fixed"]:
+                    _, fields = line.split(":")
+                    self.fixed_confs = [int(x) for x in fields.strip("\n").split()]
+                    # TODO: check this:
+                    self.fixed_residue_names = [
+                        self.conformers[fc].resid for fc in self.fixed_confs
+                    ]
+                    steps_done["fixed"] = True
+                    continue
 
-                key = ",".join([str(i) for i in ms.state])
-                if self.microstates.get(key) is None:
-                    self.microstates[key] = ms
-                else:
-                    self.microstates[key].count += ms.count
+                # free residues
+                if not steps_done["free"]:
+                    n_res, fres = line.split(":")
+                    self.free_residues = [
+                        [int(n) for n in grp.strip().split()]
+                        for grp in fres.strip(" ;\n").split(";")
+                    ]
+                    if len(self.free_residues) != int(n_res):
+                        msg = "Mismatch between the number of free residues indicator"
+                        msg = (
+                            msg
+                            + " and the number of residues listed on the same line.\n"
+                        )
+                        raise ValueError(msg + f"\t{line}")
 
-        # find N_ms, lowest, highest, averge E
-        E_sum = 0.0
-        msvalues = self.microstates.values()
-        self.N_uniq = len(msvalues)
+                    self.free_residue_names = [
+                        self.conformers[g[0]].resid for g in self.free_residues
+                    ]
+                    for ires, res in enumerate(self.free_residues):
+                        for iconf in res:
+                            self.ires_by_iconf[iconf] = ires
+                    steps_done["fee"] = True
 
-        self.lowest_E = next(iter(msvalues)).E
-        self.highest_E = next(iter(msvalues)).E
+        return
 
-        for ms in msvalues:
-            self.N_ms += ms.count
-            E_sum += ms.E * ms.count
-            if self.lowest_E > ms.E:
-                self.lowest_E = ms.E
-            if self.highest_E < ms.E:
-                self.highest_E = ms.E
-        self.average_E = E_sum / self.N_ms
+    def _get_mc_data(self):
+        """Populate class vars microstates with the data in a MC file identified
+        in `self.selected_MC`.
+        """
+
+        microstates_by_id = {}
+
+        MC_file = self.msout_file_dir.joinpath(f"MC{self.selected_MC}")
+        # lines = open(MC_file).readlines()
+
+        with open(MC_file) as fh:
+            for nl, line in enumerate(fh):
+                line = line.strip()
+
+                if nl == 0:
+                    _, confs = line.split(":")
+                    current_state = [int(c) for c in confs.split()]
+                    if not current_state:
+                        msg = "The current ms state line cannot be empty.\n"
+                        msg = msg + f"\tProblem line in {MC_file}: {nl}"
+                        raise ValueError(msg)
+                    continue
+
+                fields = line.split(",")
+                if len(fields) >= 3:
+                    state_e = float(fields[0])
+                    count = int(fields[1])
+                    flipped = [int(c) for c in fields[2].split()]
+
+                    for ic in flipped:
+                        current_state[self.ires_by_iconf[ic]] = ic
+
+                    ms = Microstate(current_state, state_e, count)
+
+                    if ms.stateid in microstates_by_id.keys():
+                        microstates_by_id[ms.stateid].count += ms.count
+                    else:
+                        microstates_by_id[ms.stateid] = ms
+                    self.counts += ms.count
+
+        self.microstates = list(microstates_by_id.values())
+
+        return
+
+    def _get_data(self):
+        """Populate class variables from head3.lst, header and MC records files."""
+        self._get_conformer_data()
+        self._get_header_data()
+        self._get_mc_data()
+
+        return
+
+    def get_occ(self, microstates: list) -> list:
+        """Return the average occupancy of conformers in each microstates."""
+
+        conf_occ = np.zeros(len(self.conformers))
+        total_counts = 0
+        for ms in microstates:
+            total_counts += ms.count
+            for iconf in ms.state():
+                conf_occ[iconf] += ms.count
+
+        return (conf_occ / total_counts).tolist()
+
+    def confnames_by_iconfs(self, iconfs):
+        """Return the conformers id given their indices."""
+
+        return [self.conformers[ic].confid for ic in list(iconfs)]
+
+    def select_by_conformer(
+        self, microstates: list, conformer_selection: list = None
+    ) -> tuple:
+        """Select microstates with confomers in conformer_selection list.
+        Args:
+            microstates (list): List of microstates.
+            conformer_selection (list): List of conformers.
+        Returns:
+            tuple: selected, unselected; if `conformer_selection` is empty,
+            returns [], microstates.
+        """
+
+        selected = []
+        unselected = []
+        if conformer_selection is None:
+            return selected, microstates
+
+        iconf_in = {self.iconf_by_confname[confid] for confid in conformer_selection}
+        for ms in microstates:
+            if set(ms.state()) & iconf_in:
+                selected.append(ms)
+            else:
+                unselected.append(ms)
+
+        return selected, unselected
+
+    def select_by_energy(self, microstates: list, energy_range: list = None) -> tuple:
+        """Select microstates if their energies is in the range given in `energy_range`.
+
+        Args:
+            microstates (list): List of microstates.
+            energy_range (list):  [low, high].
+        Returns:
+            tuple: selected, unselected; if `energy_range` is empty,
+            returns [], microstates.
+        """
+
+        if len(energy_range) != 2:
+            print(
+                f"Provide two values for `energy_range`= [low, high]; invalid: {energy_range}"
+            )
+            return None, None
+
+        selected = []
+        unselected = []
+        if energy_range is None:
+            return selected, microstates
+        energy_range.sort()
+
+        for ms in microstates:
+            if energy_range[0] <= ms.E < energy_range[1]:
+                selected.append(ms)
+            else:
+                unselected.append(ms)
+
+        return selected, unselected
+
+
+# here bc circular import if in mcce_io
+def get_pdb_remark(ms: MS, ms_index: int):
+    """Return a REMARK 250 string to prepend in pdb.
+
+    > REMARK 250 is mandatory if other than X-ray, NMR, neutron, or electron study.
+    [Ref]: https://www.wwpdb.org/documentation/file-format-content/format33/remarks1.html
+    """
+
+    R250 = """
+REMARK 250
+REMARK 250 EXPERIMENTAL DETAILS
+REMARK 250  EXPERIMENT TYPE                : MCCE simulation
+REMARK 250  DATE OF DATA COLLECTION        : {DATE}
+REMARK 250 EXPERIMENTAL CONDITIONS
+REMARK 250  TEMPERATURE                    : {T}
+REMARK 250  PH                             : {PH}
+REMARK 250  EH                             : {EH}
+REMARK 250  METHOD                         : {METHOD}
+REMARK 250  SELECTED MONTERUN              : {MC}
+REMARK 250  SELECTED MICROSTATE            : {MS}
+REMARK 250
+REMARK 250 REMARK: DATE OF DATA COLLECTION : Date this pdb was created.
+"""
+    dte = datetime.today()
+    remark = R250.format(
+        DATE=dte.strftime("%d-%b-%y"),
+        T=f"{ms.T:.2f}",
+        PH=f"{ms.pH:.2f}",
+        EH=f"{ms.Eh:.2f}",
+        METHOD=f"{ms.method.upper()}",
+        MC=f"{ms.selected_MC}",
+        MS=ms_index,
+    )
+    return remark
