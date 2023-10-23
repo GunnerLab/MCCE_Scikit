@@ -122,7 +122,6 @@ class MS:
         header_file = self.msout_file_dir.joinpath("header")
         with open(header_file) as fh:
             for nl, line in enumerate(fh):
-                # exper
                 if not steps_done["exper"]:
                     fields = line.split(",")
                     for field in fields:
@@ -148,7 +147,6 @@ class MS:
                     steps_done["exper"] = True
                     continue
 
-                # method
                 if not steps_done["method"]:
                     key, value = line.split(":")
                     if (
@@ -163,7 +161,6 @@ class MS:
                     steps_done["method"] = True
                     continue
 
-                # fixed
                 if not steps_done["fixed"]:
                     _, fields = line.split(":")
                     self.fixed_confs = [int(x) for x in fields.strip("\n").split()]
@@ -174,7 +171,6 @@ class MS:
                     steps_done["fixed"] = True
                     continue
 
-                # free residues
                 if not steps_done["free"]:
                     n_res, fres = line.split(":")
                     self.free_residues = [
@@ -226,9 +222,8 @@ class MS:
                 if len(fields) >= 3:
                     state_e = float(fields[0])
                     count = int(fields[1])
-                    flipped = [int(c) for c in fields[2].split()]
-
-                    for ic in flipped:
+                    # flipped confs:
+                    for ic in [int(c) for c in fields[2].split()]:
                         current_state[self.ires_by_iconf[ic]] = ic
 
                     ms = Microstate(current_state, state_e, count)
