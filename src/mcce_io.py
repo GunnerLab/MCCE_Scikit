@@ -82,7 +82,8 @@ def MS_to_PDB(
         mc_run (int): Index of MC record used, part of output pdb filename.
         step2_path: path to step2_out.pdb.
         output_folder: path to folder for pdb created from selected_ms.
-        remark_data (dict): Used to create pdb REMARK section: experimental, method.
+        remark_data_exper (dict): Used to create pdb REMARK section: data from MS instance:
+                                  experimental (T, PH, EH, METHOD).
     Returns:
         None: The created file names format is f"mc{mc_run}_ms{ms_index}.pdb".
 

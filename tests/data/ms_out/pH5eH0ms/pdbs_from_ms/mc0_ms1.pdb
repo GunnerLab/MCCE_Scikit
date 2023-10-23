@@ -1,18 +1,19 @@
 
-    REMARK 250
-    REMARK 250 EXPERIMENTAL DETAILS
-    REMARK 250  EXPERIMENT TYPE                : MCCE simulation
-    REMARK 250  DATE OF DATA COLLECTION        : 22-Oct-23
-    REMARK 250 EXPERIMENTAL CONDITIONS
-    REMARK 250  TEMPERATURE                    : 298.15
-    REMARK 250  PH                             : 5.00
-    REMARK 250  EH                             : 0.00
-    REMARK 250  METHOD                         : MONTERUNS
-    REMARK 250  SELECTED MONTERUN              : 0
-    REMARK 250  SELECTED MICROSTATE            : 1
-    REMARK 250
-    REMARK 250 REMARK: DATE OF DATA COLLECTION : Date this pdb was created.
-    ATOM     12  C   LYS A0001_000   3.389   7.073  13.137   1.700       0.550      BK____M000
+REMARK 250
+REMARK 250 EXPERIMENTAL DETAILS
+REMARK 250  EXPERIMENT TYPE                : MCCE simulation
+REMARK 250  DATE OF DATA COLLECTION        : 23-Oct-23
+REMARK 250 REMARK: DATE OF DATA COLLECTION is the date this pdb was created.
+REMARK 250 EXPERIMENTAL CONDITIONS
+REMARK 250  TEMPERATURE                    : 298.15
+REMARK 250  PH                             : 5.00
+REMARK 250  EH                             : 0.00
+REMARK 250  METHOD                         : MONTERUNS
+REMARK 250  SELECTED MONTERUN              : 0
+REMARK 250  SELECTED MICROSTATE INDEX      : 1
+REMARK 250
+REMARK 250 REMARK: DATE OF DATA COLLECTION : Date this pdb was created.
+ATOM     12  C   LYS A0001_000   3.389   7.073  13.137   1.700       0.550      BK____M000
 ATOM     13  O   LYS A0001_000   3.213   7.476  14.285   1.400      -0.550      BK____M000
 ATOM     45  N   VAL A0002_000   4.060   7.689  12.193   1.500      -0.350      BK____M000
 ATOM     46  H   VAL A0002_000   4.220   7.233  11.317   1.000       0.250      BK____M000
