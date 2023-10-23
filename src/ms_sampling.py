@@ -1,5 +1,5 @@
 """
-Module: ms_sampling
+Module: MCCE_Scikit/src/ms_sampling.py
 
 """
 
@@ -10,9 +10,15 @@ import mcce_io as io
 
 
 def sort_microstate_list(ms_list: list, by: str = None):
-    """Sort a list of ms objects ([base.MC.microstate,..]) by='energy' or by='count'."""
+    """Sort a list of Microstate objects ([base.MC.Microstate,..]) by='energy' or by='count'.
+    Refactored from original code:
+        ```
+        ms_orig_lst = [[ms.E, ms.count, ms.state] for ms in list((mc.microstates.values()))]
+        ms_orig_lst = sorted(ms_orig_lst, key=lambda x: x[0]) # by energy
+        ```
+    """
     if by is None:
-        raise ValueError("Argument `by` is required.")
+        raise ValueError("Argument `by` is required; one of ['energy', 'count'].")
 
     by = by.lower()
     if by not in ["energy", "count"]:
@@ -20,40 +26,104 @@ def sort_microstate_list(ms_list: list, by: str = None):
     idx = 0
     if by == "count":
         idx = 1
+    ms_values = [[m.E, m.count, m.state] for m in ms_list]
 
-    return sorted(ms_list, key=lambda x: x[idx])
+    return sorted(ms_values, key=lambda x: x[idx])
 
 
-def get_regular_samples(size: int, sorted_ms_list) -> tuple:
-    """Implement a 'regular sampling' of all microstates.
-    size: sample size
-    sorted_ms_list: sorted list of base.MC.microstate
-    Return: a tuple
-        cum sum of ms.count in sorted_ms_list, array of indices for selection
+def sample_microstates(size: int, sorted_ms_list: list) -> tuple:
     """
+    Implement a sampling of all microstates.
+    Args:
+        size (int): sample size
+        sorted_ms_list: count-sorted list of base.MC.microstate
+    Returns:
+        tuple: cumsum of ms.count in sorted_ms_list, array of indices for selection
+    """
+
     n_counts = 0.0
     ms_count_values = []
 
-    for m in sorted_ms_list:
-        n_counts += m.count
-        ms_count_values.append(m.count)
+    for ms in sorted_ms_list:
+        n_counts += ms[1]
+        ms_count_values.append(ms[1])
 
-    full_count_list = list(np.arange(n_counts))
-    ms_cum_sum = np.cumsum(ms_count_values)
+    ms_cumsum = np.cumsum(ms_count_values)
     X = n_counts - size
     Y = n_counts / size
+    count_selection = np.arange(size, X, Y)
 
-    return ms_cum_sum, np.arange(size, X, Y)
+    return ms_cumsum, count_selection
 
 
-def get_selected_confs(ms, conformers, selected_ms):
-    """Return the list of conformers for selected_ms.
-    ms: a base.MC object instance
-    conformers: list of Conformer objects as output by `io.read_conformers`.
-    selected_ms: a single ms from base.MC.microstate list.
+def get_selected_confs(ms: base.MS, selected_ms):
+    """Return the list of conformer ids for selected_ms.
+    Args:
+        ms (base.MS): class instance
+        selected_ms (int?): A single ms from base.MS.microstates list.
     """
     return [
         conf.confid
-        for conf in conformers
-        if conf.iconf in selected_ms.state or conf.iconf in ms.fixed_iconfs
+        for conf in ms.conformers
+        if conf.iconf in selected_ms[2]() or conf.iconf in ms.fixed_iconfs
     ]
+
+
+# pre: ms = base.MS(...)
+def pdbs_from_ms_samples(
+    ms: base.MS,
+    mcce_dir: str,
+    n_sample_size: int,
+    ms_sort_by: str,
+    output_dir: str,
+    list_files: bool = False,
+) -> None:
+    """Create n_sample_size MCCE_PDB files in ` output_dir`.
+
+    Args:
+        ms (base.MS): A microstate class instance.
+        mcce_dir (str): MCCE simulation output folder.
+        n_sample_size (int): How many microstates/pdbs.
+        ms_sort_by (str): Either 'energy' or 'count'.
+        output_dir (str): Output folder path;
+                          Folder "output_dir/pdbs_from_ms" will be created if necessary.
+        list_files (bool): Whether to list output folder contents.
+    """
+    ms_sort_by = ms_sort_by.lower()
+    if ms_sort_by not in ["energy", "count"]:
+        raise ValueError(
+            f"Values for `ms_sort_by` are 'energy' or 'count'; Given: {ms_sort_by}"
+        )
+
+    mcce_dir = Path(mcce_dir)
+    step2_path = mcce_dir.joinpath("step2_out.pdb")
+    io.check_path(step2_path)
+
+    pdb_out_folder = Path(output_dir).joinpath("pdbs_from_ms")
+    if not pdb_out_folder.exists():
+        Path.mkdir(pdb_out_folder)
+
+    mc_run = ms.selected_MC  # part of pdb name
+    sorted_ms_list = sort_microstate_list(ms.microstates, by=ms_sort_by)
+    ms_cumsum, count_selection = sample_microstates(n_sample_size, sorted_ms_list)
+
+    for c in count_selection:
+        ms_index = np.where((ms_cumsum - c) > 0)[0][0]
+        ms_selection = sorted_ms_list[ms_index]
+
+        confs_for_pdb = get_selected_confs(ms, ms_selection)
+
+        # gather initial data for REMARK section of pdb:
+        remark_data = base.get_pdb_remark(ms, ms_index)
+        # write the pdb in the folder
+        io.MS_to_PDB(
+            confs_for_pdb, ms_index, mc_run, remark_data, step2_path, pdb_out_folder
+        )
+        # pdb names: = Path(pdb_out_folder).joinpath(f"mc{mc_run}_ms{ms_index}.pdb")
+
+    print("PDB files creation over.")
+    if list_files:
+        print(f"Files in {pdb_out_folder}:\n")
+        io.list_folder(pdb_out_folder)
+
+    return
