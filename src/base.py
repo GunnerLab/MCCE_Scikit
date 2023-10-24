@@ -11,7 +11,6 @@
 from collections import namedtuple
 from pathlib import Path
 from typing import Union
-from datetime import datetime
 import numpy as np
 import zlib
 import mcce_io as io
@@ -319,40 +318,3 @@ class MS:
                 unselected.append(ms)
 
         return selected, unselected
-
-
-# here bc circular import if in mcce_io
-def get_pdb_remark(ms: MS, ms_index: int):
-    """Return a REMARK 250 string to prepend in pdb.
-
-    > REMARK 250 is mandatory if other than X-ray, NMR, neutron, or electron study.
-    [Ref]: https://www.wwpdb.org/documentation/file-format-content/format33/remarks1.html
-    """
-
-    R250 = """
-REMARK 250
-REMARK 250 EXPERIMENTAL DETAILS
-REMARK 250  EXPERIMENT TYPE                : MCCE simulation
-REMARK 250  DATE OF DATA COLLECTION        : {DATE}
-REMARK 250 REMARK: DATE OF DATA COLLECTION is the date this pdb was created.
-REMARK 250 EXPERIMENTAL CONDITIONS
-REMARK 250  TEMPERATURE                    : {T}
-REMARK 250  PH                             : {PH}
-REMARK 250  EH                             : {EH}
-REMARK 250  METHOD                         : {METHOD}
-REMARK 250  SELECTED MONTERUN              : {MC}
-REMARK 250  SELECTED MICROSTATE INDEX      : {MS}
-REMARK 250
-REMARK 250 REMARK: DATE OF DATA COLLECTION : Date this pdb was created.
-"""
-    dte = datetime.today()
-    remark = R250.format(
-        DATE=dte.strftime("%d-%b-%y"),
-        T=f"{ms.T:.2f}",
-        PH=f"{ms.pH:.2f}",
-        EH=f"{ms.Eh:.2f}",
-        METHOD=f"{ms.method.upper()}",
-        MC=f"{ms.selected_MC}",
-        MS=ms_index,
-    )
-    return remark

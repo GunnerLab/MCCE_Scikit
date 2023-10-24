@@ -4,6 +4,7 @@ Module: MCCE_Scikit/src/ms_sampling.py
 """
 
 from pathlib import Path
+from datetime import datetime
 import numpy as np
 import base
 import mcce_io as io
@@ -114,7 +115,7 @@ def pdbs_from_ms_samples(
         confs_for_pdb = get_selected_confs(ms, ms_selection)
 
         # gather initial data for REMARK section of pdb:
-        remark_data = base.get_pdb_remark(ms, ms_index)
+        remark_data = get_pdb_remark(ms, ms_index)
         # write the pdb in the folder
         io.MS_to_PDB(
             confs_for_pdb, ms_index, mc_run, remark_data, step2_path, pdb_out_folder
@@ -127,3 +128,42 @@ def pdbs_from_ms_samples(
         io.list_folder(pdb_out_folder)
 
     return
+
+
+def get_pdb_remark(ms: base.MS, ms_index: int):
+    """Return a REMARK 250 string to prepend in pdb.
+
+    > REMARK 250 is mandatory if other than X-ray, NMR, neutron, or electron study.
+    [Ref]: https://www.wwpdb.org/documentation/file-format-content/format33/remarks1.html
+    """
+
+    R250 = """
+REMARK 250
+REMARK 250 EXPERIMENTAL DETAILS
+REMARK 250   EXPERIMENT TYPE               : MCCE simulation
+REMARK 250   DATE OF DATA COLLECTION       : {DATE}
+REMARK 250   REMARK: DATE OF DATA COLLECTION is the date this pdb was created.
+REMARK 250 EXPERIMENTAL CONDITIONS
+REMARK 250   TEMPERATURE                   : {T:.2f} (K)
+REMARK 250   PH                            : {PH:.2f}
+REMARK 250   EH                            : {EH:.2f}
+REMARK 250   METHOD                        : {METHOD}
+REMARK 250   SELECTED MONTERUN             : {MC}
+REMARK 250   SELECTED MICROSTATE INDEX     : {MS:,}
+REMARK 250   SELECTED MICROSTATE ENERGY    : {E:.2f} (kcal/mol)
+REMARK 250
+"""
+    dte = datetime.today()
+    sel_ms = ms.microstates[ms_index]
+    remark = R250.format(
+        DATE=dte.strftime("%d-%b-%y"),
+        T=ms.T,
+        PH=ms.pH,
+        EH=ms.Eh,
+        METHOD=ms.method,
+        MC=ms.selected_MC,
+        MS=ms_index,
+        E=sel_ms.E,
+    )
+
+    return remark
