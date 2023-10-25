@@ -1,7 +1,9 @@
 # pyproject.toml
 
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = [
+    "setuptools>=60",
+    "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -40,11 +42,12 @@ requires-python = ">=3.8"
 dependencies = [  # TODO: Add full list of dependencies
     "numpy",
 ]
+dynamic = ["version"]
 [project.urls]
 Source = "https://github.com/GunnerLab/MCCE_Scikit"
 #Homepage =
 #Documentation =
-ChangeLog = "https://github.com/GunnerLab/MCCE_Scikit/blob/mainCHANGELOG.md"
+#ChangeLog = "https://github.com/GunnerLab/MCCE_Scikit/blob/mainCHANGELOG.md"
 
 [project.scripts]
 #cli-name = "mypkg.mymodule:some_func"
@@ -56,11 +59,11 @@ test = [
 [tool.setuptools]
 # This subkey is a beta stage development and keys may change in the future,
 #  see https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html for more details
-package-dir = {"" = "mcceSK"}
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
-where = ["mcceSK"]
+where = ["src"]
 namespaces = false
 
-[tool.setuptools.dynamic]
-version = {attr = "mcceSK.VERSION"}
+[tool.setuptools_scm]
+version_file = "src/_version.py"

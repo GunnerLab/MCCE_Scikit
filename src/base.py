@@ -1,6 +1,4 @@
-# mcceSK/base.py
-
-"""Contains all classes for creating MCCE objects:
+"""Module `base` Contains all classes for creating MCCE objects:
  - Conformer
  - Microstate
  - MS

@@ -11,13 +11,12 @@
 │   └── ms_sampling.ipynb
 ├── pyproject.toml
 ├── src
-│   ├── VERSION
-│   └── mcceSK
-│       ├── __init__.py
-│       ├── base.py
-│       ├── constants.py
-│       ├── mcce_io.py
-│       └── ms_sampling.py
+│   ├── __init__.py
+|   ├── _version.py
+│   ├── base.py
+│   ├── constants.py
+│   ├── mcce_io.py
+│   └── ms_sampling.py
 └── tests
     └── data
         ├── head3.lst

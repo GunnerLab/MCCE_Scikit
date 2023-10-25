@@ -1,14 +1,14 @@
 """
-Module: src/mcceSK/ms_sampling.py
+Module `ms_sampling`
 
 """
 
 from pathlib import Path
 from datetime import datetime
 import numpy as np
-from mcceSK import base
-from mcceSK import mcce_io as io
-from mcceSK import ms_sampling as sampling
+import base
+import mcce_io as io
+import ms_sampling as sampling
 
 
 def sort_microstate_list(ms_list: list, by: str = None):
