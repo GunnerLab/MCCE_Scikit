@@ -20,7 +20,7 @@ import ms_sampling as sampling
 def sort_microstate_list(ms_list: list, by: str = None, reverse=False):
     """Sort a list of Microstate objects by 'energy' or 'count'.
     Args:
-        ms_list (list): list of Microstate objects ([base.MC.Microstate,..]).
+        ms_list (list): list of Microstate objects ([base.MS.Microstate,..]).
         by (str): Sort key name, one of "energy" or "count", case insensitive.
         reverse (bool, False): Argument for `sorted` function.
     """
@@ -44,7 +44,7 @@ def sample_microstates(size: int, sorted_ms_list: list) -> tuple:
     Implement a sampling of all microstates.
     Args:
         size (int): sample size
-        sorted_ms_list: sorted list of base.MC.microstate
+        sorted_ms_list: sorted [base.MS.Microstate,..]
     Returns:
         tuple: cumsum of ms.count in sorted_ms_list, array of indices for selection
     """
@@ -56,10 +56,10 @@ def sample_microstates(size: int, sorted_ms_list: list) -> tuple:
         n_counts += ms[1]
         ms_count_values.append(ms[1])
 
-    ms_cumsum = np.cumsum(ms_count_values)
     X = n_counts - size
     Y = n_counts / size
     count_selection = np.arange(size, X, Y)
+    ms_cumsum = np.cumsum(ms_count_values)
 
     return ms_cumsum, count_selection
 
@@ -70,6 +70,7 @@ def get_selected_confs(ms: base.MS, selected_ms):
         ms (base.MS): class instance
         selected_ms (int?): A single ms from base.MS.microstates list.
     """
+
     return [
         conf.confid
         for conf in ms.conformers
@@ -77,13 +78,12 @@ def get_selected_confs(ms: base.MS, selected_ms):
     ]
 
 
-# pre: ms = base.MS(...)
 def pdbs_from_ms_samples(
     ms: base.MS,
     mcce_dir: str,
     n_sample_size: int,
     ms_sort_by: str,
-    output_dir: str,
+    output_dir: str = None,
     clear_pdbs_folder: bool = True,
     list_files: bool = False,
 ) -> None:
@@ -108,6 +108,9 @@ def pdbs_from_ms_samples(
     step2_path = mcce_dir.joinpath("step2_out.pdb")
     io.check_path(step2_path)
 
+    if not output_dir or output_dir is None:
+        output_dir = ms.msout_file_dir
+
     pdb_out_folder = Path(output_dir).joinpath("pdbs_from_ms")
     if not pdb_out_folder.exists():
         Path.mkdir(pdb_out_folder)
@@ -120,7 +123,8 @@ def pdbs_from_ms_samples(
 
     # Summarize what's being done:
     print(
-        f"Creating n={n_sample_size:,} MCCE_PDB files in {output_dir} from (n) microstates sorted by '{ms_sort_by}'."
+        f"Creating n={n_sample_size:,} MCCE_PDB files in {output_dir} from (n) microstates sorted by '{ms_sort_by}'.\n",
+        "NOTE: the output pdb will be free of any water molecules in step2_out.pdb.",
     )
 
     for c in count_selection:

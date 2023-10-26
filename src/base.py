@@ -78,10 +78,10 @@ class MS:
         self.ires_by_iconf = {}  # index of free residue by index of conf
 
         self.microstates = {}  # a dict of microstates
+        self.counts = 0  # number of Monte Carlo steps:: redundant: already in run.prm
         # self.microstates_by_id = {}  # dict
-        self.counts = 0
-        self.N_ms = 0
-        self.N_uniq = 0
+        # self.N_ms = 0
+        # self.N_uniq = 0
 
         self.fname = io.get_msout_filename(self.mcce_out, self.pH, self.Eh)
         self.msout_file_dir, created = io.mkdir_from_msout_file(self.fname)
@@ -105,7 +105,7 @@ class MS:
         return
 
     def _get_header_data(self):
-        """Populate class vars: T, pH, Eh, method, fixed_confs, free_residues,
+        """Populate class vars: T, pH, Eh, method, fixed_iconfs, free_residues,
         free_residue_names, and ires_by_iconf.
         """
 
@@ -155,10 +155,10 @@ class MS:
 
                 if not steps_done["fixed"]:
                     _, fields = line.split(":")
-                    self.fixed_confs = [int(x) for x in fields.strip("\n").split()]
+                    self.fixed_iconfs = [int(x) for x in fields.strip("\n").split()]
                     # TODO: check this:
                     self.fixed_residue_names = [
-                        self.conformers[fc].resid for fc in self.fixed_confs
+                        self.conformers[fc].resid for fc in self.fixed_iconfs
                     ]
                     steps_done["fixed"] = True
                     continue
