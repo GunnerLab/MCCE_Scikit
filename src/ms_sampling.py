@@ -78,9 +78,10 @@ def pdbs_from_ms_samples(
     n_sample_size: int,
     ms_sort_by: str,
     output_dir: str,
+    clear_pdbs_folder: bool = True,
     list_files: bool = False,
 ) -> None:
-    """Create n_sample_size MCCE_PDB files in ` output_dir`.
+    """Create `n_sample_size` MCCE_PDB files in `output_dir/pdbs_from_ms`.
 
     Args:
         ms (base.MS): A microstate class instance.
@@ -104,10 +105,15 @@ def pdbs_from_ms_samples(
     pdb_out_folder = Path(output_dir).joinpath("pdbs_from_ms")
     if not pdb_out_folder.exists():
         Path.mkdir(pdb_out_folder)
+    elif clear_pdbs_folder:
+        io.clear_folder(pdb_out_folder)
 
     mc_run = ms.selected_MC  # part of pdb name
     sorted_ms_list = sort_microstate_list(ms.microstates, by=ms_sort_by)
     ms_cumsum, count_selection = sample_microstates(n_sample_size, sorted_ms_list)
+
+    # Summarize what's being done:
+    print(f"Creating n={n_sample_size:,} MCCE_PDB files in {output_dir} from (n) microstates sorted by '{ms_sort_by}'.")
 
     for c in count_selection:
         ms_index = np.where((ms_cumsum - c) > 0)[0][0]
@@ -118,7 +124,7 @@ def pdbs_from_ms_samples(
         # gather initial data for REMARK section of pdb:
         remark_data = get_pdb_remark(ms, ms_index)
         # write the pdb in the folder
-        io.MS_to_PDB(
+        io.ms_to_pdb(
             confs_for_pdb, ms_index, mc_run, remark_data, step2_path, pdb_out_folder
         )
         # pdb names: = Path(pdb_out_folder).joinpath(f"mc{mc_run}_ms{ms_index}.pdb")

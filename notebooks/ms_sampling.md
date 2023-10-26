@@ -51,13 +51,11 @@ def add_to_sys_path(this_path, up=False):
         newp = Path(this_path).parent
     else:
         newp = Path(this_path)
-
     src = newp.joinpath("src")
     if src.exists():
         newp = str(src)
     else:
         newp = str(newp)
-
     if newp not in sys.path:
         sys.path.insert(1, newp)
         print('Path added to sys.path: {}'.format(newp))
@@ -143,11 +141,6 @@ pdbs_dir = msout_file_dir.joinpath("pdbs_from_ms")
 !ls {pdbs_dir}
 ```
 
-```python
-io.clear_folder(pdbs_dir)
-!ls {pdbs_dir}
-```
-
 # base.MC class
 
 ```python
@@ -177,12 +170,12 @@ ms.method
 
 # ms sampling
 
-```python
+<!-- #raw -->
 fdir(sampling)
-```
+<!-- #endraw -->
 
 ```python
-n_sample_size = 5
+n_sample_size = 4
 ms_sort_by = "energy"
 output_dir = msout_file_dir
 ```
@@ -196,7 +189,9 @@ sampling.pdbs_from_ms_samples(ms,
                               n_sample_size,
                               ms_sort_by,
                               output_dir,
-                              list_files=True)
+                              clear_pdbs_folder=True,  # default:True
+                              list_files=True          # default:False
+                            )
 
 d = time.time() - start_time
 print(f"`sampling.pdbs_from_ms_samples` with sample size={n_sample_size:,} took {d/60:.2f} mins or {d:.2f} seconds")
