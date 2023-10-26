@@ -7,5 +7,4 @@ dependencies:
   - numpy
   - matplotlib
   - ipykernel
-  - click
   - pip

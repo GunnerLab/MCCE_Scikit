@@ -1,6 +1,8 @@
 # Current project:
 data/4lzt
+tests/data/ms_out/*/MC*
 _maybe/
+_tmp
 _scratch.ipynb
 Untitled.ipynb
 

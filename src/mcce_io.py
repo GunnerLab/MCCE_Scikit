@@ -1,17 +1,14 @@
-# mcceSK/mcce_io.py
-
-"""Module contains a collection of functions to find/access mcce output files.
+"""Module `mcce_io` contains a collection of functions to find/access mcce output files.
 
 The module contains the following functions:
-
  - check_msout_split
- - check_path : Returns None or FileNotFoundError.
- - clear_folder : Delete folder files
- - get_msout_filename :
- - list_folder : List files in folder
- - mcce_pdb2pdb : TODO?
- - mkdir_from_msout_file :
- - ms_to_pdb :
+ - check_path
+ - clear_folder
+ - get_msout_filename
+ - list_folder
+ - mcce_pdb2pdb
+ - mkdir_from_msout_file
+ - ms_to_pdb
  - read_conformers : Returns a tuple: conformers (list), iconf_by_confname (dict). [Nearing deprecation]
  - split_msout_file : Split a file in ms_out folder (i.e. a "msout file") into header and MCi records files.
 
@@ -20,8 +17,8 @@ The module contains the following functions:
 from pathlib import Path
 from typing import Union
 import numpy as np
-from mcceSK import base
-from mcceSK import constants as cst
+import base
+import constants as cst
 
 
 def mcce_pdb2pdb(fname):
