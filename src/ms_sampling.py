@@ -1,6 +1,12 @@
 """
 Module `ms_sampling`
 
+The module contains the following functions:
+ - get_pdb_remark
+ - get_selected_confs
+ - pdbs_from_ms_samples
+ - sample_microstates
+ - sort_microstate_list
 """
 
 from pathlib import Path
@@ -11,14 +17,14 @@ import mcce_io as io
 import ms_sampling as sampling
 
 
-def sort_microstate_list(ms_list: list, by: str = None):
-    """Sort a list of Microstate objects ([base.MC.Microstate,..]) by='energy' or by='count'.
-    Refactored from original code:
-        ```
-        ms_orig_lst = [[ms.E, ms.count, ms.state] for ms in list((mc.microstates.values()))]
-        ms_orig_lst = sorted(ms_orig_lst, key=lambda x: x[0]) # by energy
-        ```
+def sort_microstate_list(ms_list: list, by: str = None, reverse=False):
+    """Sort a list of Microstate objects by 'energy' or 'count'.
+    Args:
+        ms_list (list): list of Microstate objects ([base.MC.Microstate,..]).
+        by (str): Sort key name, one of "energy" or "count", case insensitive.
+        reverse (bool, False): Argument for `sorted` function.
     """
+
     if by is None:
         raise ValueError("Argument `by` is required; one of ['energy', 'count'].")
 
@@ -30,7 +36,7 @@ def sort_microstate_list(ms_list: list, by: str = None):
         idx = 1
     ms_values = [[m.E, m.count, m.state] for m in ms_list]
 
-    return sorted(ms_values, key=lambda x: x[idx])
+    return sorted(ms_values, key=lambda x: x[idx], reverse=reverse)
 
 
 def sample_microstates(size: int, sorted_ms_list: list) -> tuple:
@@ -38,7 +44,7 @@ def sample_microstates(size: int, sorted_ms_list: list) -> tuple:
     Implement a sampling of all microstates.
     Args:
         size (int): sample size
-        sorted_ms_list: count-sorted list of base.MC.microstate
+        sorted_ms_list: sorted list of base.MC.microstate
     Returns:
         tuple: cumsum of ms.count in sorted_ms_list, array of indices for selection
     """
@@ -113,7 +119,9 @@ def pdbs_from_ms_samples(
     ms_cumsum, count_selection = sample_microstates(n_sample_size, sorted_ms_list)
 
     # Summarize what's being done:
-    print(f"Creating n={n_sample_size:,} MCCE_PDB files in {output_dir} from (n) microstates sorted by '{ms_sort_by}'.")
+    print(
+        f"Creating n={n_sample_size:,} MCCE_PDB files in {output_dir} from (n) microstates sorted by '{ms_sort_by}'."
+    )
 
     for c in count_selection:
         ms_index = np.where((ms_cumsum - c) > 0)[0][0]
