@@ -5,7 +5,8 @@ repos:
     rev: v3.4.0
     hooks:
     -   id: trailing-whitespace
-        exclude: /[A-Za-z0-9_]+\.[md|txt|pdb]+
+        exclude: /[A-Za-z0-9_]+\.[lst|md|txt|pdb|ipynb]+/
+        #exclude: /[A-Za-z0-9_]+\.[md|txt|pdb]+
     -   id: end-of-file-fixer
     -   id: check-yaml
     -   id: check-added-large-files
@@ -13,4 +14,4 @@ repos:
     rev: 23.9.1
     hooks:
     -   id: black
-        exclude: /[A-Za-z0-9_]+\.[md|txt|pdb]+
+        exclude: /[A-Za-z0-9_]+\.[lst|md|txt|pdb|ipynb]+/
